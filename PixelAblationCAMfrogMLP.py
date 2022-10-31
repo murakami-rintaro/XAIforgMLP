@@ -70,10 +70,11 @@ class PixelAblationCAMfrogMLP():
 
         #元々のスコアを取得
         base_class_name, base_prob = self.base_model_output(_input)
+        
 
         value = torch.zeros(1, N, N)
-        for i in range(10):
-            for j in range(10):
+        for i in range(N):
+            for j in range(N):
                 #(i,j)要素を保存した後0に
                 r, b, g = _input[0, 0, i, j], _input[0, 1, i, j], _input[0, 2, i, j]
                 _input[0, 0, i, j] = 0
@@ -82,7 +83,7 @@ class PixelAblationCAMfrogMLP():
 
                 #(i,j)要素を削除した際のスコアを取得して記録
                 tmp_prob = self.model_output(_input, base_class_name)
-                value[0, i, j] = (tmp_prob - base_prob) / base_prob
+                value[i, j] = (tmp_prob - base_prob) / base_prob
 
                 #入力を基に戻す
                 _input[0, 0, i, j], _input[0, 1, i, j], _input[0, 2, i, j] = r, g, b
@@ -100,11 +101,12 @@ class PixelAblationCAMfrogMLP():
 
         #元々のスコアを取得
         base_class_name, base_prob = self.base_model_output(_input)
-        base_class_index = 
+        #判定されたクラスのインデックスを取得
+        base_class_index = self.class_names.index(base_class_name)
 
-        value = torch.zeros(1, N, N)
-        for i in range(10):
-            for j in range(10):
+        value = np.zeros((N, N))
+        for i in range(N):
+            for j in range(1):
                 #(i,j)要素を保存した後0に
                 r, b, g = _input[0, 0, i, j], _input[0, 1, i, j], _input[0, 2, i, j]
                 _input[0, 0, i, j] = 0
@@ -114,19 +116,8 @@ class PixelAblationCAMfrogMLP():
                 #(i,j)要素を削除した際のスコアを取得して記録
                 output = self.model(_input)
                 batch_probs = F.softmax(output, dim=1)
-                batch_probs, batch_indices = batch_probs.sort(dim=1, descending=True)
-                tmp_prob = 0
-                flag = False
-                
-                for probs, indices in zip(batch_probs, batch_indices):
-                    for k in range(1000):
-                        if self.class_names[indices[k]] == base_class_name:
-                            tmp_prob = probs[k]
-                            flag = True
-                            break
-                    if flag:
-                        break
-                value[0, i, j] = (tmp_prob - base_prob) / base_prob
+                tmp_prob = batch_probs[0][base_class_index].item()
+                value[i, j] = (tmp_prob - base_prob) / base_prob
                 #入力を基に戻す
                 _input[0, 0, i, j], _input[0, 1, i, j], _input[0, 2, i, j] = r, g, b
 
