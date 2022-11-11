@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def exchange_tensor_to_array(t : torch.Tensor) -> np.array:
+def exchange_tensor_to_array(t : torch.Tensor) -> np.ndarray:
     """
     blockの入出力をモデルの入力画像の形状に変換
     """
@@ -16,7 +16,7 @@ def exchange_tensor_to_array(t : torch.Tensor) -> np.array:
             dx = j % 16
             y = budge_y + dy
             x = budge_x + dx
-            res[y, x] = t[0, i, j]
+            res[y][x] = t[0, i, j]
     return res
 
 def show_heatmap_with_colorbar(x : np.ndarray) -> None:
