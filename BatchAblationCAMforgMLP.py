@@ -6,6 +6,7 @@ from pathlib import Path
 from torchvision.datasets.utils import download_url
 import json
 import numpy as np
+import matplotlib.pyplot as plt
 
 N = 224
 
@@ -90,12 +91,12 @@ class BatchlAblationCAMfrogMLP():
                         u = i + y
                         v = j + x
                         self.r[y][x] = _input[0, 0, u, v].item()
-                        self.b[y][x] = _input[0, 0, u, v].item()
-                        self.g[y][x] = _input[0, 0, u, v].item()
+                        self.b[y][x] = _input[0, 1, u, v].item()
+                        self.g[y][x] = _input[0, 2, u, v].item()
                         _input[0, 0, u, v] = 0
-                        _input[0, 0, u, v] = 0
-                        _input[0, 0, u, v] = 0
-                #print(_input)
+                        _input[0, 1, u, v] = 0
+                        _input[0, 2, u, v] = 0
+                #plt.imshow(_input[0].permute(1,2,0))
 
                 #(i,j)要素を削除した際のスコアを取得
                 output = self.model(_input)

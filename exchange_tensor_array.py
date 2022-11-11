@@ -25,4 +25,19 @@ def show_heatmap_with_colorbar(x : np.ndarray) -> None:
     im = ax.imshow(x)
     plt.colorbar(im)
     plt.show()
-    
+
+
+def rescaling_to_first_array(x: list[np.ndarray]) -> list[np.ndarray]:
+    up = x[0].max()
+    bottom = x[0].min()
+    _range = up - bottom
+    for i in x[1:]:
+        tmp_up = i.max()
+        tmp_bottom = i.min()
+        tmp_range = tmp_up - tmp_bottom
+        tmp_rate = _range / tmp_range
+        i -= tmp_bottom
+        i *= tmp_rate
+        i += tmp_bottom * tmp_rate
+    return x
+        

@@ -76,7 +76,7 @@ class PixelAblationCAMfrogMLP():
         for i in range(N):
             for j in range(N):
                 #(i,j)要素を保存した後0に
-                r, b, g = _input[0, 0, i, j], _input[0, 1, i, j], _input[0, 2, i, j]
+                r, b, g = _input[0, 0, i, j].item(), _input[0, 1, i, j].item(), _input[0, 2, i, j].item()
                 _input[0, 0, i, j] = 0
                 _input[0, 1, i, j] = 0
                 _input[0, 2, i, j] = 0
