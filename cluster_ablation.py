@@ -402,7 +402,7 @@ class cluster_ablation():
                 img[0, 0, v, u] = r
                 img[0, 1, v, u] = b
                 img[0, 2, v, u] = g
-        return probs, tmp_inputs, masks
+        #return probs, tmp_inputs, masks
         #各マスクした画像に対するスコアを基にクラスタごとのshapley値を算出
         
         for i in range(2 ** n_c):
