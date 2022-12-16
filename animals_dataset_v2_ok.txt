@@ -1,54 +1,54 @@
 Cat
-Animal-Data-V2/Validation Data/Cat/cat-valid (3).jpg オオヤマネコ 0.9049587249755859
-Animal-Data-V2/Validation Data/Cat/cat-valid (44).jpg エジプトの猫 0.8788292407989502
-Animal-Data-V2/Validation Data/Cat/cat-valid (4).jpg ペルシャ猫 0.8760967254638672
-Animal-Data-V2/Validation Data/Cat/cat-valid (52).jpg オオヤマネコ 0.8749845623970032
-Animal-Data-V2/Validation Data/Cat/cat-valid (43).jpeg ペルシャ猫 0.8737577199935913
-Animal-Data-V2/Validation Data/Cat/cat-valid (43).jpeg ペルシャ猫 0.8737577199935913
-Animal-Data-V2/Validation Data/Cat/cat-valid (34).jpg ペルシャ猫 0.8706188201904297
+Animal-Data-V2/Validation Data/Cat/cat-valid (3).jpg, オオヤマネコ, 0.9049587249755859
+Animal-Data-V2/Validation Data/Cat/cat-valid (44).jpg, エジプトの猫, 0.8788292407989502
+Animal-Data-V2/Validation Data/Cat/cat-valid (4).jpg, ペルシャ猫, 0.8760967254638672
+Animal-Data-V2/Validation Data/Cat/cat-valid (52).jpg, オオヤマネコ, 0.8749845623970032
+Animal-Data-V2/Validation Data/Cat/cat-valid (43).jpeg, ペルシャ猫, 0.8737577199935913
+Animal-Data-V2/Validation Data/Cat/cat-valid (43).jpeg, ペルシャ猫, 0.8737577199935913
+Animal-Data-V2/Validation Data/Cat/cat-valid (34).jpg, ペルシャ猫, 0.8706188201904297
 Cow
-Animal-Data-V2/Validation Data/Cow/Cow (58).jpeg 雄牛 0.9130936861038208
-Animal-Data-V2/Validation Data/Cow/Cow (63).jpeg 雄牛 0.8845164179801941
-Animal-Data-V2/Validation Data/Cow/Cow (38).jpeg 雄牛 0.8446542620658875
-Animal-Data-V2/Validation Data/Cow/Cow (86).jpeg 雄牛 0.8295676708221436
+Animal-Data-V2/Validation Data/Cow/Cow (58).jpeg, 雄牛, 0.9130936861038208
+Animal-Data-V2/Validation Data/Cow/Cow (63).jpeg, 雄牛, 0.8845164179801941
+Animal-Data-V2/Validation Data/Cow/Cow (38).jpeg, 雄牛, 0.8446542620658875
+Animal-Data-V2/Validation Data/Cow/Cow (86).jpeg, 雄牛, 0.8295676708221436
 Dog
-Animal-Data-V2/Validation Data/Dog/Dog (11).jpg ノルウェーエルクハウンド 0.9115113615989685
-Animal-Data-V2/Validation Data/Dog/Dog (10).jpg ローデシアン・リッジバック 0.9021784067153931
-Animal-Data-V2/Validation Data/Dog/Dog (12).jpg ジャーマンシェパード 0.8824504017829895
-Animal-Data-V2/Validation Data/Dog/Dog (28).jpeg ラブラドル・レトリーバー犬 0.8801581859588623
-Animal-Data-V2/Validation Data/Dog/Dog (4).jpeg ゴールデンレトリバー 0.8797686100006104
+Animal-Data-V2/Validation Data/Dog/Dog (11).jpg, ノルウェーエルクハウンド, 0.9115113615989685
+Animal-Data-V2/Validation Data/Dog/Dog (10).jpg, ローデシアン・リッジバック, 0.9021784067153931
+Animal-Data-V2/Validation Data/Dog/Dog (12).jpg, ジャーマンシェパード, 0.8824504017829895
+Animal-Data-V2/Validation Data/Dog/Dog (28).jpeg, ラブラドル・レトリーバー犬, 0.8801581859588623
+Animal-Data-V2/Validation Data/Dog/Dog (4).jpeg, ゴールデンレトリバー, 0.8797686100006104
 Elephant
-Animal-Data-V2/Validation Data/Elephant/Elephant (40).jpeg アフリカゾウ 0.8798707723617554
-Animal-Data-V2/Validation Data/Elephant/Elephant (14).jpg\n インドゾウ 0.8785083889961243
-Animal-Data-V2/Validation Data/Elephant/Elephant (15).jpg\n インドゾウ 0.8760690093040466
-Animal-Data-V2/Validation Data/Elephant/Elephant (9).jpg\n インドゾウ 0.8476198315620422
+Animal-Data-V2/Validation Data/Elephant/Elephant (40).jpeg, アフリカゾウ, 0.8798707723617554
+Animal-Data-V2/Validation Data/Elephant/Elephant (14).jpg, インドゾウ, 0.8785083889961243
+Animal-Data-V2/Validation Data/Elephant/Elephant (15).jpg, インドゾウ, 0.8760690093040466
+Animal-Data-V2/Validation Data/Elephant/Elephant (9).jpg, インドゾウ, 0.8476198315620422
 Gorilla
-Animal-Data-V2/Validation Data/Gorilla/Gorilla (85).jpeg ゴリラ 0.9029829502105713
-Animal-Data-V2/Validation Data/Gorilla/Gorilla (90).jpeg ゴリラ 0.8996150493621826
-Animal-Data-V2/Validation Data/Gorilla/Gorilla (57).jpeg ゴリラ 0.897019624710083
-Animal-Data-V2/Validation Data/Gorilla/Gorilla (99).jpeg ゴリラ 0.8956366181373596
+Animal-Data-V2/Validation Data/Gorilla/Gorilla (85).jpeg, ゴリラ, 0.9029829502105713
+Animal-Data-V2/Validation Data/Gorilla/Gorilla (90).jpeg, ゴリラ, 0.8996150493621826
+Animal-Data-V2/Validation Data/Gorilla/Gorilla (57).jpeg, ゴリラ, 0.897019624710083
+Animal-Data-V2/Validation Data/Gorilla/Gorilla (99).jpeg, ゴリラ, 0.8956366181373596
 Hippo
-Animal-Data-V2/Validation Data/Hippo/Hippo (1).jpeg カバ 0.9241225719451904
-Animal-Data-V2/Validation Data/Hippo/Hippo (53).jpeg カバ 0.922376275062561
-Animal-Data-V2/Validation Data/Hippo/Hippo (52).jpeg カバ 0.9216405153274536
-Animal-Data-V2/Validation Data/Hippo/Hippo (42).jpeg カバ 0.9212237000465393
+Animal-Data-V2/Validation Data/Hippo/Hippo (1).jpeg, カバ, 0.9241225719451904
+Animal-Data-V2/Validation Data/Hippo/Hippo (53).jpeg, カバ, 0.922376275062561
+Animal-Data-V2/Validation Data/Hippo/Hippo (52).jpeg, カバ, 0.9216405153274536
+Animal-Data-V2/Validation Data/Hippo/Hippo (42).jpeg, カバ, 0.9212237000465393
 Monkey
-Animal-Data-V2/Validation Data/Monkey/Monkey (146).jpeg ホエザル 0.9055296182632446
-Animal-Data-V2/Validation Data/Monkey/Monkey (89).jpeg ヤセザル 0.866645097732544
-Animal-Data-V2/Validation Data/Monkey/Monkey (156).jpeg ホエザル 0.8526075482368469
-Animal-Data-V2/Validation Data/Monkey/Monkey (159).jpeg ホエザル 0.8337300419807434
+Animal-Data-V2/Validation Data/Monkey/Monkey (146).jpeg, ホエザル, 0.9055296182632446
+Animal-Data-V2/Validation Data/Monkey/Monkey (89).jpeg, ヤセザル, 0.866645097732544
+Animal-Data-V2/Validation Data/Monkey/Monkey (156).jpeg, ホエザル, 0.8526075482368469
+Animal-Data-V2/Validation Data/Monkey/Monkey (159).jpeg, ホエザル, 0.8337300419807434
 Panda
-Animal-Data-V2/Validation Data/Panda/Panda (29).jpeg ジャイアントパンダ 0.9205071330070496
-Animal-Data-V2/Validation Data/Panda/Panda (87).jpeg ジャイアントパンダ 0.9196819067001343
-Animal-Data-V2/Validation Data/Panda/Panda (58).jpeg ジャイアントパンダ 0.9194321036338806
-Animal-Data-V2/Validation Data/Panda/Panda (64).jpeg ジャイアントパンダ 0.9129303097724915
+Animal-Data-V2/Validation Data/Panda/Panda (29).jpeg, ジャイアントパンダ, 0.9205071330070496
+Animal-Data-V2/Validation Data/Panda/Panda (87).jpeg, ジャイアントパンダ, 0.9196819067001343
+Animal-Data-V2/Validation Data/Panda/Panda (58).jpeg, ジャイアントパンダ, 0.9194321036338806
+Animal-Data-V2/Validation Data/Panda/Panda (64).jpeg, ジャイアントパンダ, 0.9129303097724915
 Tiger
-Animal-Data-V2/Validation Data/Tiger/Tiger-Valid (59).jpeg 虎 0.8218916058540344
-Animal-Data-V2/Validation Data/Tiger/Tiger-Valid (29).jpeg 虎 0.8169601559638977
-Animal-Data-V2/Validation Data/Tiger/Tiger-Valid (92).jpeg 虎 0.8069067001342773
-Animal-Data-V2/Validation Data/Tiger/Tiger-Valid (63).jpeg 虎 0.8030186295509338
+Animal-Data-V2/Validation Data/Tiger/Tiger-Valid (59).jpeg, 虎, 0.8218916058540344
+Animal-Data-V2/Validation Data/Tiger/Tiger-Valid (29).jpeg, 虎, 0.8169601559638977
+Animal-Data-V2/Validation Data/Tiger/Tiger-Valid (92).jpeg, 虎, 0.8069067001342773
+Animal-Data-V2/Validation Data/Tiger/Tiger-Valid (63).jpeg, 虎, 0.8030186295509338
 Zebra
-Animal-Data-V2/Validation Data/Zebra/Zebra-Valid (326).jpeg シマウマ 0.9192679524421692
-Animal-Data-V2/Validation Data/Zebra/Zebra-Valid (321).jpeg シマウマ 0.9159662127494812
-Animal-Data-V2/Validation Data/Zebra/Zebra-Valid (363).jpeg シマウマ 0.9144089818000793
-Animal-Data-V2/Validation Data/Zebra/Zebra-Valid (369).jpeg シマウマ 0.9121609330177307
+Animal-Data-V2/Validation Data/Zebra/Zebra-Valid (326).jpeg, シマウマ, 0.9192679524421692
+Animal-Data-V2/Validation Data/Zebra/Zebra-Valid (321).jpeg, シマウマ, 0.9159662127494812
+Animal-Data-V2/Validation Data/Zebra/Zebra-Valid (363).jpeg, シマウマ, 0.9144089818000793
+Animal-Data-V2/Validation Data/Zebra/Zebra-Valid (369).jpeg, シマウマ, 0.9121609330177307
