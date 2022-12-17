@@ -426,7 +426,7 @@ class cluster_ablation():
                 cover_img[i, j, 3] = 0
         max_shap = max(shap[:-1])
         for i, c in zip(p, pred):
-            if c == -1 or shap[c] < max_shap / 2:
+            if c == -1 or shap[c] < max_shap:
                 continue
             y, x = i
             cover_img[y, x, 0] = 255 * shap[c] / max_shap
