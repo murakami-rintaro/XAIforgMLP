@@ -243,30 +243,30 @@ class cluster_ablation():
         if mode == "D":
             #DBSCANでクラスタリング(クラスタ数がn_c_max未満になるようにmin_samplesを調整)
             
-            self.eps = 5
-            self.outlier = self.border
-            self.n_c = 0
-            self.pred = np.zeros(1)
-            paras = defaultdict(lambda : [])
-            for eps in range(3, 30):
-                for min_samples in (4, 20):
-                    db = DBSCAN(eps = eps, min_samples=min_samples)
-                    pred = db.fit_predict(p)
-                    n_c = len(set(pred))
+            # self.eps = 5
+            # self.outlier = self.border
+            # self.n_c = 0
+            # self.pred = np.zeros(1)
+            # paras = defaultdict(lambda : [])
+            # for eps in range(3, 30):
+            #     for min_samples in (4, 20):
+            #         db = DBSCAN(eps = eps, min_samples=min_samples)
+            #         pred = db.fit_predict(p)
+            #         n_c = len(set(pred))
                     
-                    #各クラスタが4つ以上の点があるかを確認する(なぜか1つでクラスタリングされる事例があったので)
-                    flag = True 
-                    for i in list(set(pred)):
-                        if i == -1:
-                            continue
-                        if np.count_nonzero(pred == i) < 4:
-                            flag = False
-                            break
-                    if not flag:
-                        continue
-                    outlier = np.count_nonzero(pred==-1)
-                    #if n_c == self.n_c_max: #クラス数が閾値以下で最大かどうか
-                    paras[n_c].append([outlier, pred])
+            #         #各クラスタが4つ以上の点があるかを確認する(なぜか1つでクラスタリングされる事例があったので)
+            #         flag = True 
+            #         for i in list(set(pred)):
+            #             if i == -1:
+            #                 continue
+            #             if np.count_nonzero(pred == i) < 4:
+            #                 flag = False
+            #                 break
+            #         if not flag:
+            #             continue
+            #         outlier = np.count_nonzero(pred==-1)
+            #         #if n_c == self.n_c_max: #クラス数が閾値以下で最大かどうか
+            #         paras[n_c].append([outlier, pred])
             
             #fig, ax = plt.subplots()
             # plt.scatter(x, y,s=100,c=self.pred, cmap="Blues")
@@ -274,36 +274,36 @@ class cluster_ablation():
             # plt.xlim(0, 223)
             # plt.ylim(223, 0)
             
-            para_index = bisect.bisect_left(sorted(paras.keys()), self.n_c_max)#クラスタ数が閾値以下で最大のもの
-            if para_index == len(paras.keys()):#クラスタ数が閾値以下のものが存在しない時
-                para_index -= 1
-            n_c = sorted(paras.keys())[para_index]
-            print("n_c list : {}".format(paras.keys()))
-            print("n_c={}".format(n_c))
-            print(sorted(paras[n_c]))
-            pred = sorted(paras[n_c])[0][1] #外れ値が最も少ないもの
+            # para_index = bisect.bisect_left(sorted(paras.keys()), self.n_c_max)#クラスタ数が閾値以下で最大のもの
+            # if para_index == len(paras.keys()):#クラスタ数が閾値以下のものが存在しない時
+            #     para_index -= 1
+            # n_c = sorted(paras.keys())[para_index]
+            # print("n_c list : {}".format(paras.keys()))
+            # print("n_c={}".format(n_c))
+            # print(sorted(paras[n_c]))
+            # pred = sorted(paras[n_c])[0][1] #外れ値が最も少ないもの
             
             
             #pred = self.pred
             #n_c = self.n_c
             #return pred, paras
             
-            # db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
-            # pred = db.fit_predict(p)
-            # #クラスタ数
-            # n_c = len(set(pred))            
-            # while n_c <= 3:
-            #     self.min_samples -= 1
-            #     db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
-            #     pred = db.fit_predict(p)
-            #     n_c = len(set(pred))
+            db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
+            pred = db.fit_predict(p)
+            #クラスタ数
+            n_c = len(set(pred))            
+            while n_c <= 3:
+                self.min_samples -= 1
+                db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
+                pred = db.fit_predict(p)
+                n_c = len(set(pred))
 
-            # while n_c >= self.n_c_max:
-            #     db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
-            #     pred = db.fit_predict(p)
-            #     #クラスタ数
-            #     n_c = len(set(pred))
-            #     self.eps += 1
+            while n_c >= self.n_c_max:
+                db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
+                pred = db.fit_predict(p)
+                #クラスタ数
+                n_c = len(set(pred))
+                self.eps += 1
         elif mode == "K":
             #kmeansでクラスタリング
             km = KMeans(n_clusters=7, random_state=0)
@@ -357,7 +357,7 @@ class cluster_ablation():
                         masks[c].append((i, j))
                         mask_flag[i][j] = False
                         flag_count += 1
-            print(flag_count)
+            #print(flag_count)
         for i in range(224):
             for j in range(224):
                 if mask_flag[i][j]:
@@ -426,7 +426,7 @@ class cluster_ablation():
                 cover_img[i, j, 3] = 0
         max_shap = max(shap[:-1])
         for i, c in zip(p, pred):
-            if c == -1 or shap[c] < max_shap:
+            if c == -1 or shap[c] < max_shap * 0.5:
                 continue
             y, x = i
             cover_img[y, x, 0] = 255 * shap[c] / max_shap
