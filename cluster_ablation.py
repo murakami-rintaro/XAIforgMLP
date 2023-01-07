@@ -16,6 +16,7 @@ from scipy.spatial import Delaunay
 from collections import defaultdict
 from math import factorial
 from collections import defaultdict
+from collections import Counter
 import bisect
 
 from sklearn.cluster import DBSCAN, KMeans
@@ -23,6 +24,8 @@ from pyclustering.cluster.xmeans import xmeans
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 
 import copy
+import time
+
 
 class cluster_ablation():
     """
@@ -205,7 +208,7 @@ class cluster_ablation():
         return shap, p, pred
 
 
-    def calc_shapley_save_img(self, input_path : str, output_path : str, mode = "D", border=300, eps=9, min_samples = 10, n_c_max = 10):
+    def calc_shapley_save_img(self, input_path : str, output_path : str, mode = "D", border=300, eps=9, min_samples = 10, n_c_max = 10, max_rate = 0.8):
         """1枚の入力画像に対するshapley値を算出.クラスタごとにshapley値に応じて元画像にマッピングする."""
         
         #パラメータ更新
@@ -291,19 +294,28 @@ class cluster_ablation():
             db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
             pred = db.fit_predict(p)
             #クラスタ数
-            n_c = len(set(pred))            
-            while n_c <= 3:
-                self.min_samples -= 1
-                db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
-                pred = db.fit_predict(p)
-                n_c = len(set(pred))
+            n_c = len(set(pred))
 
-            while n_c >= self.n_c_max:
-                db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
-                pred = db.fit_predict(p)
-                #クラスタ数
-                n_c = len(set(pred))
-                self.eps += 1
+            # if n_c <= 3:
+            #     print("{}, {}, {}, {}".format(input_path, eps, min_samples, n_c))
+            #     #plt.scatter(x, y, s=100, c=pred, cmap="Blues")
+            #     raise Exception          
+            # while n_c <= 3:
+            #     self.min_samples -= 1
+            #     db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
+            #     pred = db.fit_predict(p)
+            #     n_c = len(set(pred))
+
+            # while n_c >= self.n_c_max:
+            #     db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
+            #     pred = db.fit_predict(p)
+            #     #クラスタ数
+            #     n_c = len(set(pred))
+            #     self.eps += 1
+                
+                
+            
+            
         elif mode == "K":
             #kmeansでクラスタリング
             km = KMeans(n_clusters=7, random_state=0)
@@ -424,20 +436,1002 @@ class cluster_ablation():
         for i in range(224):
             for j in range(224):
                 cover_img[i, j, 3] = 0
-        max_shap = max(shap[:-1])
-        for i, c in zip(p, pred):
-            if c == -1 or shap[c] < max_shap * 0.5:
-                continue
-            y, x = i
-            cover_img[y, x, 0] = 255 * shap[c] / max_shap
-            cover_img[y, x, 3] = 255
-        cover_img = Image.fromarray(cover_img)
+        max_shap = max(shap[:-1]) * max_rate
+        # for i, c in zip(p, pred):
+        #     if c == -1 or shap[c] < max_shap * 0.5:
+        #         continue
+        #     y, x = i
+        #     cover_img[y, x, 0] = 255 * shap[c] / max_shap
+        #     cover_img[y, x, 3] = 255
+        
+        # 塗りつぶすver(shapley値による色の変化は無し) PIL.Imageのまま画素値を変更する
         base_img = self.trasnform_for_result(_input)
-        base_img.paste(cover_img, (0, 0), cover_img)
+        for k, v in masks.items():
+            if k == n_c - 1 or shap[k] < max_shap:
+                continue
+            for y, x in v:
+                base_img.putpixel((x, y), (255, 0, 0, 0))
+
         base_img.save(output_path, quality=95)
         
+        #return shap, tmp_inputs, values, masks, p, pred, mask_flag, clusters, left, right, up, down
+        return shap, p, pred, masks
+
+    def only_clustering(self, input_path : str, mode = "D", border=300, eps=15, min_samples = 10, k = 10):
+        """1枚の入力画像に対するshapley値を算出.クラスタごとにshapley値に応じて元画像にマッピングする."""
+        
+        #パラメータ更新
+        self.border = border
+        self.eps = eps
+        self.min_samples = min_samples
         
         
+        #pathから入力画像を読み込んで変換
+        _input = Image.open(input_path)
+        img = self.trasnform_for_model(_input)
+        img = img.unsqueeze(0)
+    
+        #元々のスコアを取得
+        class_name, base_prob = self.base_model_output(img)
+        #判定されたクラスのインデックスを取得
+        class_index = self.class_names.index(class_name)
+
+        #最初の中間層の出力を取得
+        mid_0 = exchange.exchange_tensor_to_array(self.model.blocks[0].block_output)
+        self.block_output_exchanged.append(mid_0)
+
+        #最初の中間層をフィルタリング
+        filtering_border = self.meguru_bisect_for_filitering(mid_output=mid_0, border=self.border)
+        y, x = np.where(abs(mid_0) > filtering_border)
+        p = [ [y[i], x[i]] for i in range(len(y))]
+        
+        
+        
+        """
+        #DBSCANでクラスタリング(パラメータは別途求めること)
+        db = DBSCAN(eps=9, min_samples=5)
+        pred = db.fit_predict(p)
+        """
+        
+        if mode == "D":
+            #DBSCANでクラスタリング(クラスタ数がn_c_max未満になるようにmin_samplesを調整)
+            
+            # self.eps = 5
+            # self.outlier = self.border
+            # self.n_c = 0
+            # self.pred = np.zeros(1)
+            # paras = defaultdict(lambda : [])
+            # for eps in range(3, 30):
+            #     for min_samples in (4, 20):
+            #         db = DBSCAN(eps = eps, min_samples=min_samples)
+            #         pred = db.fit_predict(p)
+            #         n_c = len(set(pred))
+                    
+            #         #各クラスタが4つ以上の点があるかを確認する(なぜか1つでクラスタリングされる事例があったので)
+            #         flag = True 
+            #         for i in list(set(pred)):
+            #             if i == -1:
+            #                 continue
+            #             if np.count_nonzero(pred == i) < 4:
+            #                 flag = False
+            #                 break
+            #         if not flag:
+            #             continue
+            #         outlier = np.count_nonzero(pred==-1)
+            #         #if n_c == self.n_c_max: #クラス数が閾値以下で最大かどうか
+            #         paras[n_c].append([outlier, pred])
+            
+            #fig, ax = plt.subplots()
+            # plt.scatter(x, y,s=100,c=self.pred, cmap="Blues")
+            # plt.colorbar()
+            # plt.xlim(0, 223)
+            # plt.ylim(223, 0)
+            
+            # para_index = bisect.bisect_left(sorted(paras.keys()), self.n_c_max)#クラスタ数が閾値以下で最大のもの
+            # if para_index == len(paras.keys()):#クラスタ数が閾値以下のものが存在しない時
+            #     para_index -= 1
+            # n_c = sorted(paras.keys())[para_index]
+            # print("n_c list : {}".format(paras.keys()))
+            # print("n_c={}".format(n_c))
+            # print(sorted(paras[n_c]))
+            # pred = sorted(paras[n_c])[0][1] #外れ値が最も少ないもの
+            
+            
+            #pred = self.pred
+            #n_c = self.n_c
+            #return pred, paras
+            
+            db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
+            pred = db.fit_predict(p)
+            #クラスタ数
+            n_c = len(set(pred))
+
+            # if n_c <= 3:
+            #     print("{}, {}, {}, {}".format(input_path, eps, min_samples, n_c))
+            #     #plt.scatter(x, y, s=100, c=pred, cmap="Blues")
+            #     raise Exception          
+            # while n_c <= 3:
+            #     self.min_samples -= 1
+            #     db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
+            #     pred = db.fit_predict(p)
+            #     n_c = len(set(pred))
+
+            # while n_c >= self.n_c_max:
+            #     db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
+            #     pred = db.fit_predict(p)
+            #     #クラスタ数
+            #     n_c = len(set(pred))
+            #     self.eps += 1
+                
+                
+            
+            
+        elif mode == "K":
+            #kmeansでクラスタリング
+            km = KMeans(n_clusters=7, random_state=0)
+            pred = km.fit_predict(p)
+            n_c = len(set(pred)) + 1
+        elif mode=="X":
+            #X-meansでクラスタリング
+            tmp_p = np.array([[y[i], x[i]] for i in range(len(y))])
+            xm_i = xmeans(data=tmp_p, k_max=10, ccore=True)
+            xm_i.process()
+            pred = [0] * len(y)
+            n_c = len(xm_i._xmeans__clusters) + 1
+            for i in range(n_c - 1):
+                for j in xm_i._xmeans__clusters[i]:
+                    pred[j] = int(i)
+        elif mode=="DX":
+            #dbscanで外れ値を除外
+            db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
+            pred = db.fit_predict(p)
+            #クラスタ数
+            n_c = len(set(pred))
+            ok_p_index = []
+            for i in range(len(p)):
+                if pred[i] == -1:
+                    continue
+                ok_p_index.append(i)
+                        #X-meansでクラスタリング
+            p = np.array([[y[i], x[i]] for i in ok_p_index])
+            xm_i = xmeans(data=p, k_max=10, ccore=True)
+            xm_i.process()
+            pred = [0] * len(p)
+            n_c = len(xm_i._xmeans__clusters) + 1
+            for i in range(n_c - 1):
+                for j in xm_i._xmeans__clusters[i]:
+                    pred[j] = int(i)
+        elif mode=="DK":
+            #dbscanで外れ値を除外
+            db = DBSCAN(eps=self.eps, min_samples=self.min_samples)
+            pred = db.fit_predict(p)
+            #クラスタ数
+            n_c = len(set(pred))
+            ok_p_index = []
+            for i in range(len(p)):
+                if pred[i] == -1:
+                    continue
+                ok_p_index.append(i)
+            #k-meansでクラスタリング
+            p = [ [y[i], x[i]] for i in ok_p_index]
+            km = KMeans(n_clusters=k, random_state=0)
+            pred = km.fit_predict(p)
+            n_c = len(set(pred)) + 1
+            
+            
+
+        return p, pred
+
+    def calc_shapley(self, img : torch.Tensor):
+
+        """1枚の入力画像に対するshapley値を算出"""
+
+        #元々のスコアを取得
+        class_name, base_prob = self.base_model_output(img)
+        #判定されたクラスのインデックスを取得
+        class_index = self.class_names.index(class_name)
+
+        #最初の中間層の出力を取得
+        mid_0 = exchange.exchange_tensor_to_array(self.model.blocks[0].block_output)
+        self.block_output_exchanged.append(mid_0)
+
+        #最初の中間層をフィルタリング
+        filtering_border = self.meguru_bisect_for_filitering(mid_output=mid_0, border=300)
+        y, x = np.where(abs(mid_0) > filtering_border)
+        p = [ [y[i], x[i]] for i in range(len(y))]
+        #DBSCANでクラスタリング(パラメータは別途求めること)
+        db = DBSCAN(eps=9, min_samples=5)
+        pred = db.fit_predict(p)
+
+        #クラスタ数
+        n_c = len(set(pred))
+
+        #shaply値格納
+        shap = [0] * n_c
+        #各マスクされた画像に対するスコア格納
+        probs = [0] * pow(2, n_c)
+        #マスクする際のバックアップ
+        input_backup = defaultdict(lambda : [])
+
+        #クラスタごとに点群を求める。各点群の座標の最大値最小値も記録しておく
+        clusters = defaultdict(lambda : [])
+        left = defaultdict(lambda : 1000)
+        right = defaultdict(lambda : -1000)
+        up = defaultdict(lambda : 1000)
+        down = defaultdict(lambda : -1000)
+
+        for v, u, c in zip(y, x, pred):
+            if c == -1:
+                continue
+            clusters[c].append((v, u))
+            left[c] = min(left[c], u)
+            right[c] = max(right[c], u)
+            up[c] = min(up[c], v)
+            down[c] = max(down[c], v)
+
+        #各画素ごとにどのクラスタの凸包に属するかを判定
+        masks = defaultdict(lambda : [])
+        mask_flag = [ [True] * 224 for _ in range(224)]
+
+        for c in range(n_c - 1):
+            for i in range(up[c], down[c] + 1):
+                for j in range(left[c], right[c] + 1):
+                    if self.in_hull_([i, j], clusters[c]):
+                        masks[c].append((i, j))
+                        mask_flag[i][j] = False
+        for i in range(224):
+            for j in range(224):
+                if mask_flag[i][j]:
+                    masks[n_c - 1].append((i, j))
+
+        #マスクした画像保存用
+        tmp_inputs = []
+
+        values = []
+
+        #全組み合わせを総当たり
+        for i in range(2 ** n_c):
+            input_backup = defaultdict(lambda : [])
+            for c in range(n_c):
+                if i >> c & 1:
+                    #マスクする
+                    for y, x in masks[c]:
+                        r, b, g = img[0, 0, y, x].item(), img[0, 1, y, x].item(), img[0, 2, y, x].item()
+                        input_backup[(y, x)] = [r, b, g]
+                        img[0, 0, y, x] = 0
+                        img[0, 1, y, x] = 0
+                        img[0, 2, y, x] = 0
+
+            
+            #モデルに流してスコアを得る
+            tmp_output = self.model(img)
+            tmp_batch_probs = F.softmax(tmp_output, dim=1)
+            tmp_prob = tmp_batch_probs[0][class_index].item()
+            
+            probs[i] = tmp_prob
+            values.append(tmp_prob)
+            
+            tmp_inputs.append(copy.deepcopy(img))
+            
+            #入力画像を元に戻す
+            for key, val in input_backup.items():
+                v, u = key
+                r, b, g = val
+                img[0, 0, v, u] = r
+                img[0, 1, v, u] = b
+                img[0, 2, v, u] = g
+        
+        #各マスクした画像に対するスコアを基にクラスタごとのshapley値を算出
+        
+        for i in range(2 ** n_c):
+            count = 0
+            flags = []
+            for j in range(n_c):
+                if i >> j & 1:
+                    count += 1
+                else:
+                    flags.append(j)
+            for j in flags:
+                tmp = factorial(count) * factorial(n_c - count - 1) * (-probs[i + pow(2, j)] + probs[i]) / factorial(n_c)
+                shap[j] += tmp
         
         #return shap, tmp_inputs, values, masks, p, pred, mask_flag, clusters, left, right, up, down
         return shap, p, pred
+
+
+    def calc_shapley_save_img_by_xmeans(self, input_path : str, output_path : str, border=300, max_rate = 0.8):
+        """
+        1枚の入力画像に対するshapley値を算出.クラスタごとにshapley値に応じて元画像にマッピングする.
+        クラスタリングにはx-meansを使用
+        """
+        
+        #パラメータ更新
+        self.border = border        
+        
+        #pathから入力画像を読み込んで変換
+        _input = Image.open(input_path)
+        img = self.trasnform_for_model(_input)
+        img = img.unsqueeze(0)
+    
+        #元々のスコアを取得
+        class_name, base_prob = self.base_model_output(img)
+        #判定されたクラスのインデックスを取得
+        class_index = self.class_names.index(class_name)
+
+        #最初の中間層の出力を取得
+        mid_0 = exchange.exchange_tensor_to_array(self.model.blocks[0].block_output)
+        self.block_output_exchanged.append(mid_0)
+
+        #最初の中間層をフィルタリング
+        filtering_border = self.meguru_bisect_for_filitering(mid_output=mid_0, border=self.border)
+        y, x = np.where(abs(mid_0) > filtering_border)
+        p = [ [y[i], x[i]] for i in range(len(y))]
+
+            
+        #X-meansでクラスタリング. 外れ値のインデックスは-1(最大)
+        tmp_p = np.array([[y[i], x[i]] for i in range(len(y))])
+        xm_i = xmeans(data=tmp_p, k_max=10, ccore=True)
+        xm_i.process()
+        pred = [0] * len(y)
+        n_c = len(xm_i._xmeans__clusters) + 1
+        for i in range(n_c - 1):
+            for j in xm_i._xmeans__clusters[i]:
+                pred[j] = int(i)
+
+        #shaply値格納
+        shap = [0] * n_c
+        #各マスクされた画像に対するスコア格納
+        probs = [0] * pow(2, n_c)
+        #マスクする際のバックアップ
+        input_backup = defaultdict(lambda : [])
+
+        #クラスタごとに点群を求める。各点群の座標の最大値最小値も記録しておく
+        clusters = defaultdict(lambda : [])
+        left = defaultdict(lambda : 1000)
+        right = defaultdict(lambda : -1000)
+        up = defaultdict(lambda : 1000)
+        down = defaultdict(lambda : -1000)
+
+        for v, u, c in zip(y, x, pred):
+            if c == -1:
+                continue
+            clusters[c].append((v, u))
+            left[c] = min(left[c], u)
+            right[c] = max(right[c], u)
+            up[c] = min(up[c], v)
+            down[c] = max(down[c], v)
+
+        #各画素ごとにどのクラスタの凸包に属するかを判定
+        masks = defaultdict(lambda : [])
+        mask_flag = [ [True] * 224 for _ in range(224)]
+
+        flag_count = 0
+        for c in range(n_c - 1):
+            for i in range(up[c], down[c] + 1):
+                for j in range(left[c], right[c] + 1):
+                    if self.in_hull_([i, j], clusters[c]):
+                        masks[c].append((i, j))
+                        mask_flag[i][j] = False
+                        flag_count += 1
+            #print(flag_count)
+        for i in range(224):
+            for j in range(224):
+                if mask_flag[i][j]:
+                    masks[n_c - 1].append((i, j))
+
+        #マスクした画像保存用
+        tmp_inputs = []
+
+        values = []
+
+        #全組み合わせを総当たり
+        for i in range(2 ** n_c):
+            input_backup = defaultdict(lambda : [])
+            for c in range(n_c):
+                if i >> c & 1:
+                    #マスクする
+                    for y, x in masks[c]:
+                        r, b, g = img[0, 0, y, x].item(), img[0, 1, y, x].item(), img[0, 2, y, x].item()
+                        input_backup[(y, x)] = [r, b, g]
+                        img[0, 0, y, x] = 0
+                        img[0, 1, y, x] = 0
+                        img[0, 2, y, x] = 0
+            #print(len(np.where(img[0][0]==len(masks[c]))))
+
+            
+            #モデルに流してスコアを得る
+            tmp_output = self.model(img)
+            tmp_batch_probs = F.softmax(tmp_output, dim=1)
+            tmp_prob = tmp_batch_probs[0][class_index].item()
+            
+            probs[i] = tmp_prob
+            values.append(tmp_prob)
+            
+            tmp_inputs.append(copy.deepcopy(img))
+            
+            #入力画像を元に戻す
+            for key, val in input_backup.items():
+                v, u = key
+                r, b, g = val
+                img[0, 0, v, u] = r
+                img[0, 1, v, u] = b
+                img[0, 2, v, u] = g
+        #return probs, tmp_inputs, masks
+        #各マスクした画像に対するスコアを基にクラスタごとのshapley値を算出
+        
+        for i in range(2 ** n_c):
+            count = 0
+            flags = []
+            for j in range(n_c):
+                if i >> j & 1:
+                    count += 1
+                else:
+                    flags.append(j)
+            for j in flags:
+                tmp = factorial(count) * factorial(n_c - count - 1) * (-probs[i + pow(2, j)] + probs[i]) / factorial(n_c)
+                shap[j] += tmp
+        
+        
+        
+        #クラスタごとにマッピング.shapley値が最も大きいクラスタを255とする
+        cover_img = np.zeros((224, 224, 4), dtype=np.uint8)
+        for i in range(224):
+            for j in range(224):
+                cover_img[i, j, 3] = 0
+        max_shap = max(shap[:-1]) * max_rate
+        
+            
+        # 塗りつぶすver(shapley値による色の変化は無し) PIL.Imageのまま画素値を変更する
+        base_img = self.trasnform_for_result(_input)
+        for k, v in masks.items():
+            if k == n_c - 1 or shap[k] < max_shap:
+                continue
+            for y, x in v:
+                base_img.putpixel((x, y), (255, 0, 0, 0))
+
+        base_img.save(output_path, quality=95)
+        
+        #return shap, tmp_inputs, values, masks, p, pred, mask_flag, clusters, left, right, up, down
+        return shap, p, pred, masks
+
+
+    def calc_shapley_save_img_by_kmeans(self, input_path : str, output_path : str, border=300, num_cluster = 10, max_rate = 0.8):
+        """1枚の入力画像に対するshapley値を算出.クラスタごとにshapley値に応じて元画像にマッピングする.クラスタリングにはk-meansを使用"""
+        
+        #パラメータ更新
+        self.border = border
+        
+        
+        #pathから入力画像を読み込んで変換
+        _input = Image.open(input_path)
+        img = self.trasnform_for_model(_input)
+        img = img.unsqueeze(0)
+    
+        #元々のスコアを取得
+        class_name, base_prob = self.base_model_output(img)
+        #判定されたクラスのインデックスを取得
+        class_index = self.class_names.index(class_name)
+
+        #最初の中間層の出力を取得
+        mid_0 = exchange.exchange_tensor_to_array(self.model.blocks[0].block_output)
+        self.block_output_exchanged.append(mid_0)
+
+        #最初の中間層をフィルタリング
+        filtering_border = self.meguru_bisect_for_filitering(mid_output=mid_0, border=self.border)
+        y, x = np.where(abs(mid_0) > filtering_border)
+        p = [ [y[i], x[i]] for i in range(len(y))]
+        
+        """
+        #DBSCANでクラスタリング(パラメータは別途求めること)
+        db = DBSCAN(eps=9, min_samples=5)
+        pred = db.fit_predict(p)
+        """
+        
+        #kmeansでクラスタリング
+        km = KMeans(n_clusters=num_cluster, random_state=0)
+        pred = km.fit_predict(p)
+        n_c = len(set(pred)) + 1
+
+        #shaply値格納
+        shap = [0] * n_c
+        #各マスクされた画像に対するスコア格納
+        probs = [0] * pow(2, n_c)
+        #マスクする際のバックアップ
+        input_backup = defaultdict(lambda : [])
+
+        #クラスタごとに点群を求める。各点群の座標の最大値最小値も記録しておく
+        clusters = defaultdict(lambda : [])
+        left = defaultdict(lambda : 1000)
+        right = defaultdict(lambda : -1000)
+        up = defaultdict(lambda : 1000)
+        down = defaultdict(lambda : -1000)
+
+        for v, u, c in zip(y, x, pred):
+            if c == -1:
+                continue
+            clusters[c].append((v, u))
+            left[c] = min(left[c], u)
+            right[c] = max(right[c], u)
+            up[c] = min(up[c], v)
+            down[c] = max(down[c], v)
+
+        #各画素ごとにどのクラスタの凸包に属するかを判定
+        masks = defaultdict(lambda : [])
+        mask_flag = [ [True] * 224 for _ in range(224)]
+
+        flag_count = 0
+        for c in range(n_c - 1):
+            for i in range(up[c], down[c] + 1):
+                for j in range(left[c], right[c] + 1):
+                    if self.in_hull_([i, j], clusters[c]):
+                        masks[c].append((i, j))
+                        mask_flag[i][j] = False
+                        flag_count += 1
+            #print(flag_count)
+        for i in range(224):
+            for j in range(224):
+                if mask_flag[i][j]:
+                    masks[n_c - 1].append((i, j))
+
+        #マスクした画像保存用
+        tmp_inputs = []
+
+        values = []
+
+        #全組み合わせを総当たり
+        for i in range(2 ** n_c):
+            input_backup = defaultdict(lambda : [])
+            for c in range(n_c):
+                if i >> c & 1:
+                    #マスクする
+                    for y, x in masks[c]:
+                        r, b, g = img[0, 0, y, x].item(), img[0, 1, y, x].item(), img[0, 2, y, x].item()
+                        input_backup[(y, x)] = [r, b, g]
+                        img[0, 0, y, x] = 0
+                        img[0, 1, y, x] = 0
+                        img[0, 2, y, x] = 0
+            #print(len(np.where(img[0][0]==len(masks[c]))))
+
+            
+            #モデルに流してスコアを得る
+            tmp_output = self.model(img)
+            tmp_batch_probs = F.softmax(tmp_output, dim=1)
+            tmp_prob = tmp_batch_probs[0][class_index].item()
+            
+            probs[i] = tmp_prob
+            values.append(tmp_prob)
+            
+            tmp_inputs.append(copy.deepcopy(img))
+            
+            #入力画像を元に戻す
+            for key, val in input_backup.items():
+                v, u = key
+                r, b, g = val
+                img[0, 0, v, u] = r
+                img[0, 1, v, u] = b
+                img[0, 2, v, u] = g
+        #return probs, tmp_inputs, masks
+        #各マスクした画像に対するスコアを基にクラスタごとのshapley値を算出
+        
+        for i in range(2 ** n_c):
+            count = 0
+            flags = []
+            for j in range(n_c):
+                if i >> j & 1:
+                    count += 1
+                else:
+                    flags.append(j)
+            for j in flags:
+                tmp = factorial(count) * factorial(n_c - count - 1) * (-probs[i + pow(2, j)] + probs[i]) / factorial(n_c)
+                shap[j] += tmp
+        
+        
+        
+        #クラスタごとにマッピング.shapley値が最も大きいクラスタを255とする
+        cover_img = np.zeros((224, 224, 4), dtype=np.uint8)
+        for i in range(224):
+            for j in range(224):
+                cover_img[i, j, 3] = 0
+        max_shap = max(shap[:-1]) * max_rate
+
+        # 塗りつぶすver(shapley値による色の変化は無し) PIL.Imageのまま画素値を変更する
+        base_img = self.trasnform_for_result(_input)
+        for k, v in masks.items():
+            if k == n_c - 1 or shap[k] < max_shap:
+                continue
+            for y, x in v:
+                base_img.putpixel((x, y), (255, 0, 0, 0))
+
+        base_img.save(output_path, quality=95)
+        
+        #return shap, tmp_inputs, values, masks, p, pred, mask_flag, clusters, left, right, up, down
+        return shap, p, pred, masks
+
+
+    def calc_shapley_save_img_by_dbscan_and_kmeans(self, input_path : str, output_path : str, border=300, eps = 15, min_samples = 5, k = 10, max_rate = 0.8):
+        """1枚の入力画像に対するshapley値を算出.クラスタごとにshapley値に応じて元画像にマッピングする.クラスタリングにはddbscanとk-meansの2段階を使用"""
+        
+            #パラメータ更新
+        self.border = border
+        
+        
+        #pathから入力画像を読み込んで変換
+        _input = Image.open(input_path)
+        img = self.trasnform_for_model(_input)
+        img = img.unsqueeze(0)
+    
+        #元々のスコアを取得
+        class_name, base_prob = self.base_model_output(img)
+        #判定されたクラスのインデックスを取得
+        class_index = self.class_names.index(class_name)
+
+        #最初の中間層の出力を取得
+        mid_0 = exchange.exchange_tensor_to_array(self.model.blocks[0].block_output)
+        self.block_output_exchanged.append(mid_0)
+
+        #最初の中間層をフィルタリング
+        filtering_border = self.meguru_bisect_for_filitering(mid_output=mid_0, border=self.border)
+        y, x = np.where(abs(mid_0) > filtering_border)
+        p = [ [y[i], x[i]] for i in range(len(y))]
+        
+       #dbscanで外れ値を除外
+        db = DBSCAN(eps=eps, min_samples=min_samples)
+        pred = db.fit_predict(p)
+        ok_p_index = []
+        for i in range(len(p)):
+            if pred[i] == -1:
+                continue
+            ok_p_index.append(i)
+        #k-meansでクラスタリング
+        tmp_p = [ [y[i], x[i]] for i in ok_p_index]
+        km = KMeans(n_clusters=k, random_state=0)
+        pred = km.fit_predict(tmp_p)
+        
+        
+        
+        #要素数が4未満のクラスタを除外
+        new_cluster = {} #不適当なクラスタを除外した後の要素数が4以上のクラスタのクラスタ番号
+        ng_cluster = set() #要素数が4未満のクラスタ番号を保存する
+        ng_count = 0 #要素数が4未満のクラスタの個数
+        for c in range(n_c):
+            if len(np.where(pred == c)[0]) < 4: #除外する
+                ng_cluster.add(c)
+                ng_count += 1
+            else:
+                new_cluster[c] = c - ng_count
+        k -= ng_count
+        p = []
+        for i in range(len(tmp_p)):
+            if pred[i] in ng_cluster: #除外するクラスタ
+                continue
+            #除外しないクラスタ
+            pred[i] = new_cluster[pred[i]]
+            p.append(tmp_p[i])
+        
+
+
+        #各マスクされた画像に対するスコア格納
+        probs = [0] * pow(2, k + 1)
+        #shapley値格納用
+        shap = [0] * (k + 1)
+        #マスクする際のバックアップ
+        input_backup = defaultdict(lambda : [])
+
+        
+        #クラスタごとに点群を求める。各点群の座標の最大値最小値も記録しておく
+        clusters = defaultdict(lambda : [])
+        left = defaultdict(lambda : 1000)
+        right = defaultdict(lambda : -1000)
+        up = defaultdict(lambda : 1000)
+        down = defaultdict(lambda : -1000)
+        
+        
+        y = [ i[0] for i in p]
+        x = [ i[1] for i in p]
+        for v, u, c in zip(y, x, pred):
+            clusters[c].append([v, u])
+            left[c] = min(left[c], u)
+            right[c] = max(right[c], u)
+            up[c] = min(up[c], v)
+            down[c] = max(down[c], v)
+        
+        
+        masks = defaultdict(lambda : [])
+        mask_flag = [ [True] * 224 for _ in range(224)]
+        masked_img = torch.zeros((3, 224, 224))
+        
+        
+        
+        for c in range(k):
+            for i in range(up[c], down[c] + 1):
+                for j in range(left[c], right[c] + 1):
+                    if mask_flag[i][j] != True:
+                        continue
+                    if self.in_hull_([i, j], clusters[c]):
+                        masks[c].append([i, j])
+                        mask_flag[i][j] = False
+                        for ii in range(3):
+                            masked_img[ii, i, j] = 25 * (c + 1)
+        
+        for i in range(224):
+            for j in range(224):
+                if masked_img[i][j]:
+                    masks[k].append([i, j])
+        
+        #全組み合わせを総当たり
+        for i in range(2 ** (k + 1)):
+            input_backup = defaultdict(lambda : [])
+            for c in range(k + 1):
+                if i >> c & 1: #マスクする
+                    for v, u in masks[c]:
+                        r, b, g = img[0, 0, v, u].item(), img[0, 1, v, u].item(), img[0, 2, v, u].item()        
+                        input_backup[(v, u)] = [r, b, g]
+                        img[0, 0, v, u] = 0
+                        img[0, 1, v, u] = 0
+                        img[0, 2, v, u] = 0
+            
+            #モデルに流してスコアを得る
+            tmp_output = self.model(img)
+            tmp_batch_probs = F.softmax(tmp_output, dim=1)
+            tmp_prob = tmp_batch_probs[0][class_index].item()
+            
+            probs[i] = tmp_prob
+            
+            #入力画像を元に戻す
+            for key, val in input_backup.items():
+                v, u = key
+                r, b, g = val
+                img[0, 0, v, u] = r
+                img[0, 1, v, u] = b
+                img[0, 2, v, u] = g
+         
+        fac = [1] * (k + 2)
+        for i in range(2, k + 2):
+            fac[i] = fac[i - 1] * i
+            
+        for i in range(2 ** (k + 1)):
+            flags = []
+            count = 0
+            for j in range(k + 1):
+                if i >> j & 1:
+                    count += 1
+                else:
+                    flags.append(j)
+            for j in flags:
+                tmp = fac(count) * fac(k - count) * (-probs[i + pow(2, j)] + probs[i]) / fac(k + 1)
+                        
+        #クラスタごとにマッピング.shapley値が最も大きいクラスタを255とする
+        cover_img = np.zeros((224, 224, 4), dtype=np.uint8)
+        for i in range(224):
+            for j in range(224):
+                cover_img[i, j, 3] = 0
+        max_shap = max(shap[:-1]) * max_rate
+
+        # 塗りつぶすver(shapley値による色の変化は無し) PIL.Imageのまま画素値を変更する
+        base_img = self.trasnform_for_result(_input)
+        for key, val in masks.items():
+            if key == k or shap[k] < max_shap:
+                continue
+            for y, x in v:
+                base_img.putpixel((x, y), (255, 0, 0, 0))
+
+        #base_img.save(output_path, quality=95)
+        
+        #return shap, tmp_inputs, values, masks, p, pred, mask_flag, clusters, left, right, up, down
+        return shap, p, pred, masks
+    
+    
+    
+    
+    def calc_prob_save_img_by_dbscan_and_kmeans(self, input_path : str, output_path : str, border=300, eps = 15, min_samples = 5, k = 10, max_rate = 0.8):
+        """1枚の入力画像に対するヒートマップを作成.クラスタごとにそのクラスタをマスクした時の元々のスコアとの差をとる。クラスタリングにはddbscanとk-meansの2段階を使用"""
+        
+        #パラメータ更新
+        self.border = border
+        
+        
+        #pathから入力画像を読み込んで変換
+        _input = Image.open(input_path)
+        img = self.trasnform_for_model(_input)
+        img = img.unsqueeze(0)
+    
+        #元々のスコアを取得
+        class_name, base_prob = self.base_model_output(img)
+        #判定されたクラスのインデックスを取得
+        class_index = self.class_names.index(class_name)
+
+        #最初の中間層の出力を取得
+        mid_0 = exchange.exchange_tensor_to_array(self.model.blocks[0].block_output)
+        self.block_output_exchanged.append(mid_0)
+
+        #最初の中間層をフィルタリング
+        filtering_border = self.meguru_bisect_for_filitering(mid_output=mid_0, border=self.border)
+        y, x = np.where(abs(mid_0) > filtering_border)
+        p = [ [y[i], x[i]] for i in range(len(y))]
+        
+       #dbscanで外れ値を除外
+        db = DBSCAN(eps=eps, min_samples=min_samples)
+        pred = db.fit_predict(p)
+        ok_p_index = []
+        for i in range(len(p)):
+            if pred[i] == -1:
+                continue
+            ok_p_index.append(i)
+        #k-meansでクラスタリング
+        tmp_p = [ [y[i], x[i]] for i in ok_p_index]
+        km = KMeans(n_clusters=k, random_state=0)
+        pred = km.fit_predict(tmp_p)
+        
+        
+        
+        #要素数が4未満のクラスタを除外
+        new_cluster = {} #不適当なクラスタを除外した後の要素数が4以上のクラスタのクラスタ番号
+        ng_cluster = set() #要素数が4未満のクラスタ番号を保存する
+        ng_count = 0 #要素数が4未満のクラスタの個数
+        for c in range(k):
+            if len(np.where(pred == c)[0]) < 4: #除外する
+                ng_cluster.add(c)
+                ng_count += 1
+            else:
+                new_cluster[c] = c - ng_count
+        p = []
+        k -= ng_count
+        for i in range(len(tmp_p)):
+            if pred[i] in ng_cluster: #除外するクラスタ
+                continue
+            #除外しないクラスタ
+            pred[i] = new_cluster[pred[i]]
+            p.append(tmp_p[i])
+        
+
+
+        #各マスクされた画像に対するスコア格納
+        probs = torch.zeros((1, k))
+        #マスクする際のバックアップ
+        input_backup = defaultdict(lambda : [])
+
+        # #クラスタごとに点群を求める。各点群の座標の最大値最小値も記録しておく
+        # clusters = defaultdict(lambda : [])
+        # left = defaultdict(lambda : 1000)
+        # right = defaultdict(lambda : -1000)
+        # up = defaultdict(lambda : 1000)
+        # down = defaultdict(lambda : -1000)
+
+        # for v, u, c in zip(y, x, pred):
+        #     if c == -1:
+        #         continue
+        #     clusters[c].append((v, u))
+        #     left[c] = min(left[c], u)
+        #     right[c] = max(right[c], u)
+        #     up[c] = min(up[c], v)
+        #     down[c] = max(down[c], v)
+
+        # #各画素ごとにどのクラスタの凸包に属するかを判定
+        # masks = defaultdict(lambda : [])
+        # mask_flag = [ [True] * 224 for _ in range(224)]
+
+        # flag_count = 0
+        # for c in range(n_c):
+        #     for i in range(up[c], down[c] + 1):
+        #         for j in range(left[c], right[c] + 1):
+        #             if self.in_hull_([i, j], clusters[c]):
+        #                 masks[c].append((i, j))
+        #                 mask_flag[i][j] = False
+        #                 flag_count += 1
+        # for i in range(224):
+        #     for j in range(224):
+        #         if mask_flag[i][j]:
+        #             masks[n_c].append((i, j))
+        
+        #クラスタごとに点群を求める。各点群の座標の最大値最小値も記録しておく
+        clusters = defaultdict(lambda : [])
+        left = defaultdict(lambda : 1000)
+        right = defaultdict(lambda : -1000)
+        up = defaultdict(lambda : 1000)
+        down = defaultdict(lambda : -1000)
+        
+        
+        y = [ i[0] for i in p]
+        x = [ i[1] for i in p]
+        for v, u, c in zip(y, x, pred):
+            clusters[c].append([v, u])
+            left[c] = min(left[c], u)
+            right[c] = max(right[c], u)
+            up[c] = min(up[c], v)
+            down[c] = max(down[c], v)
+        
+        
+        masks = defaultdict(lambda : [])
+        mask_flag = [ [True] * 224 for _ in range(224)]
+        masked_img = torch.zeros((3, 224, 224))
+        
+        
+        
+        for c in range(k):
+            for i in range(up[c], down[c] + 1):
+                for j in range(left[c], right[c] + 1):
+                    if mask_flag[i][j] != True:
+                        continue
+                    if self.in_hull_([i, j], clusters[c]):
+                        masks[c].append([i, j])
+                        mask_flag[i][j] = False
+                        for ii in range(3):
+                            masked_img[ii, i, j] = 25 * (c + 1)
+        
+        # for i in range(224):
+        #     for j in range(224):
+        #         if mask_flag[i][j] != True:
+        #             continue
+        #         for c in range(k):
+        #             if self.in_hull_([i, j], clusters[c]):
+        #                 masks[c].append([i, j])
+        #                 mask_flag[i][j] = False
+        #                 for ii in range(3):
+        #                     masked_img[ii, i, j] = 25 * (c + 1)
+        
+        
+        #return masked_img, masks, mask_flag
+
+        #マスクした画像保存用
+        tmp_inputs = []
+        
+        
+        masked_img = torch.zeros_like(img)
+        
+
+        #クラスタ1つずつだけマスクする
+        for c in range(k):
+            input_backup = defaultdict(lambda : [])
+            for y, x in masks[c]:
+                r, b, g = img[0, 0, y, x].item(), img[0, 1, y, x].item(), img[0, 2, y, x].item()
+                input_backup[(y, x)] = [r, b, g]
+                img[0, 0, y, x] = 0
+                img[0, 1, y, x] = 0
+                img[0, 2, y, x] = 0
+                
+                masked_img[0, 0, y, x] = 255
+                masked_img[0, 1, y, x] = 255
+                masked_img[0, 2, y, x] = 255
+                
+            #モデルに流してスコアを得る
+            tmp_output = self.model(img)
+            tmp_batch_probs = F.softmax(tmp_output, dim=1)
+            probs[0, c] = (base_prob - tmp_batch_probs[0][class_index].item()) / base_prob
+            tmp_inputs.append(copy.deepcopy(img))
+            #入力画像を元に戻す
+            for key, val in input_backup.items():
+                v, u = key
+                r, b, g = val
+                img[0, 0, v, u] = r
+                img[0, 1, v, u] = b
+                img[0, 2, v, u] = g
+                
+        
+        
+                        
+        #ソフトマックスを掛ける
+        values = F.softmax(probs, dim=1)
+        values = values.tolist()[0]
+        
+        #return probs, values, values_beta, masked_img, masks
+                
+        #クラスタごとにマッピング.
+        cover_img = np.zeros((224, 224, 4), dtype=np.uint8)
+        for i in range(224):
+            for j in range(224):
+                cover_img[i, j, 3] = 0
+
+        # 塗りつぶすver(スコアによる色の変化は無し) PIL.Imageのまま画素値を変更する
+        base_img = self.trasnform_for_result(_input)
+        mapped_array = [[False] * 224 for _ in range(224)] # 実験用に2重リストでもマッピングされているかを記録しておく
+        for key, val in masks.items():
+            if values[key] <= 1 / k:
+                continue
+            for v, u in val:
+                base_img.putpixel((u, v), (int(255 * values[key]), 0, 0, 0))
+                mapped_array[u][v] = True
+
+        base_img.save(output_path, quality=95)
+        
+        #return shap, tmp_inputs, values, masks, p, pred, mask_flag, clusters, left, right, up, down
+        return values, p, pred, masks, base_img, masked_img, mapped_array

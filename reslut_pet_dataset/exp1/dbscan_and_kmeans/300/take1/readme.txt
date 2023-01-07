@@ -1,0 +1,1 @@
+eps=15, min_samples = 5,k=7, max_rate = 0.8
