@@ -1223,7 +1223,7 @@ class cluster_ablation():
     
     
     
-    def calc_prob_save_img_by_dbscan_and_kmeans(self, input_path : str, output_path : str, border=300, eps = 15, min_samples = 5, k = 10, max_rate = 0.8):
+    def calc_prob_save_img_by_dbscan_and_kmeans(self, input_path : str, output_path : str, border=300, eps = 15, min_samples = 5, k = 10, value_border = 0.1, save = True):
         """1枚の入力画像に対するヒートマップを作成.クラスタごとにそのクラスタをマスクした時の元々のスコアとの差をとる。クラスタリングにはddbscanとk-meansの2段階を使用"""
         
         #パラメータ更新
@@ -1248,6 +1248,7 @@ class cluster_ablation():
         filtering_border = self.meguru_bisect_for_filitering(mid_output=mid_0, border=self.border)
         y, x = np.where(abs(mid_0) > filtering_border)
         p = [ [y[i], x[i]] for i in range(len(y))]
+
         
        #dbscanで外れ値を除外
         db = DBSCAN(eps=eps, min_samples=min_samples)
@@ -1257,12 +1258,12 @@ class cluster_ablation():
             if pred[i] == -1:
                 continue
             ok_p_index.append(i)
+        
+        
         #k-meansでクラスタリング
         tmp_p = [ [y[i], x[i]] for i in ok_p_index]
         km = KMeans(n_clusters=k, random_state=0)
         pred = km.fit_predict(tmp_p)
-        
-        
         
         #要素数が4未満のクラスタを除外
         new_cluster = {} #不適当なクラスタを除外した後の要素数が4以上のクラスタのクラスタ番号
@@ -1358,6 +1359,13 @@ class cluster_ablation():
                         for ii in range(3):
                             masked_img[ii, i, j] = 25 * (c + 1)
         
+        
+        #どのクラスタにも属してないのをもう1つのクラスタとする
+        for i in range(224):
+            for j in range(224):
+                if mask_flag[i][j] == True: #既にクラスタに登録されてる
+                    continue
+                masks[k].append([i, j])
         # for i in range(224):
         #     for j in range(224):
         #         if mask_flag[i][j] != True:
@@ -1396,7 +1404,7 @@ class cluster_ablation():
             #モデルに流してスコアを得る
             tmp_output = self.model(img)
             tmp_batch_probs = F.softmax(tmp_output, dim=1)
-            probs[0, c] = (base_prob - tmp_batch_probs[0][class_index].item()) / base_prob
+            probs[0, c] = (base_prob - tmp_batch_probs[0][class_index].item())  / base_prob
             tmp_inputs.append(copy.deepcopy(img))
             #入力画像を元に戻す
             for key, val in input_backup.items():
@@ -1406,9 +1414,7 @@ class cluster_ablation():
                 img[0, 1, v, u] = b
                 img[0, 2, v, u] = g
                 
-        
-        
-                        
+
         #ソフトマックスを掛ける
         values = F.softmax(probs, dim=1)
         values = values.tolist()[0]
@@ -1425,13 +1431,14 @@ class cluster_ablation():
         base_img = self.trasnform_for_result(_input)
         mapped_array = [[False] * 224 for _ in range(224)] # 実験用に2重リストでもマッピングされているかを記録しておく
         for key, val in masks.items():
-            if values[key] <= 1 / k:
+            if key == k or values[key] <= value_border:
                 continue
             for v, u in val:
-                base_img.putpixel((u, v), (int(255 * values[key]), 0, 0, 0))
+                base_img.putpixel((u, v), (int(255), 0, 0, 0))
                 mapped_array[u][v] = True
 
-        base_img.save(output_path, quality=95)
+        if save:
+            base_img.save(output_path, quality=95)
         
         #return shap, tmp_inputs, values, masks, p, pred, mask_flag, clusters, left, right, up, down
         return values, p, pred, masks, base_img, masked_img, mapped_array

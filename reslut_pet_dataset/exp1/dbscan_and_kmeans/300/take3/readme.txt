@@ -1,0 +1,1 @@
+exp.calc_prob_save_img_by_dbscan_and_kmeans(input_path=input_path, output_path=output_path, border=300, eps=15, min_samples=5, k=10)

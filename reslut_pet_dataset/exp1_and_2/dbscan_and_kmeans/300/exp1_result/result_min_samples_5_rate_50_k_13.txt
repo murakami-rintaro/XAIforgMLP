@@ -1,0 +1,22 @@
+### border=300, eps=15, min_samples=5, k=13, value_border=(1 / 13) * 0.5
+### 所要時間 255.06188988685608 sec
+5126 10876 5126 6497 Egyptian_Mau_118.jpg
+4715 16443 4715 7726 Persian_105.jpg
+4 3804 4 16550 Egyptian_Mau_123.jpg
+6810 16403 6810 11359 keeshond_182.jpg
+3237 10875 3237 16354 keeshond_137.jpg
+2678 8023 2678 13106 scottish_terrier_183.jpg
+3958 15402 3958 8188 keeshond_184.jpg
+256 5984 256 15400 newfoundland_186.jpg
+19229 45485 19229 0 english_cocker_spaniel_105.jpg
+1043 10657 1043 11979 pomeranian_175.jpg
+5115 3829 5115 10473 leonberger_116.jpg
+6140 9106 6140 6769 japanese_chin_15.jpg
+14255 28305 14255 1996 Siamese_17.jpg
+736 7004 736 14001 wheaten_terrier_122.jpg
+1004 2188 1004 14906 leonberger_167.jpg
+10364 25924 10364 3577 newfoundland_112.jpg
+15597 22851 15597 935 beagle_143.jpg
+6819 20342 6819 6785 Persian_163.jpg
+3678 4622 3678 10535 great_pyrenees_130.jpg
+4901 4867 4901 12146 pomeranian_121.jpg
